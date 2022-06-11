@@ -5,7 +5,7 @@ from threading import Thread
 import numpy as np
 import cv2
 from logger import get_logger
-
+from core.fps import FPS
 
 class VideoReader:
     def __init__(self, source, max_size=1, clean_if_full=True) -> None:
@@ -29,12 +29,14 @@ class VideoReader:
                     self._logger.debug("Cleaning video reader queue")
                     self.clean_queue()
 
+    @FPS("RTSP Reader FPS", 5)
     def _read_from_source(self) -> Optional[np.ndarray]:
         retval, frame = self._capture.read()
         if not retval:
             frame = self._reconnect()
         return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) if retval else None
 
+    @FPS("Consumer FPS", 5)
     def get_frame(self) -> Optional[np.ndarray]:
         frame = self._queue.get()
         self._queue.task_done()
