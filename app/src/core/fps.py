@@ -13,7 +13,8 @@ class FPS:
 
     def __call__(self, func: Callable):
         if not self._logger:
-            self._logger = get_logger(func.__name__)
+            name = ".".join(func.__qualname__.split(".")[:-1])
+            self._logger = get_logger(name)
         def inner(*args, **kwargs):
             result = func(*args, **kwargs)
             self._counter += 1

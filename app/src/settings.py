@@ -6,7 +6,7 @@ from dependency_injector import providers
 class Settings(BaseSettings):
     # Video Source
     RTSP_SOURCE: str
-    VIDEO_READER_QUEUE_SIZE: int = 1
+    VIDEO_READER_QUEUE_SIZE: int = 10
 
     # Run Mode
     DEBUG: Optional[bool] = False

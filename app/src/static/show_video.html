@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Video</title>
+    </head>
+    <body>
+        <h1>WebSocket Video</h1>
+        <form action="" onsubmit="sendMessage(event)">
+            <input type="text" id="messageText" autocomplete="off"/>
+            <button>Send</button>
+        </form>
+
+        <ul id='messages'>
+        </ul>
+
+        <div id="count"></div>
+        <div id="img"></div>
+        <img id="img2"> </img>
+
+        <script>
+            var ws = new WebSocket("ws://localhost:8000/ws/testchannel");
+            ws.onmessage = function(msg) {
+                var image = document.getElementById('img2');
+                image.src = 'data:image/jpg;base64,' + msg.data;
+                console.log(image.src);
+          };
+            function sendMessage(event) {
+                var input = document.getElementById("messageText")
+                ws.send(input.value)
+                input.value = ''
+                event.preventDefault()
+            }
+        </script>
+    </body>
+</html>

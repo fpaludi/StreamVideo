@@ -4,7 +4,9 @@ from services.factories import video_reader
 from logger import get_logger
 
 app = app_factory()
-logger = get_logger(__file__)
+
+
+logger = get_logger("API")
 
 @app.on_event("startup")
 async def startup_event():
@@ -13,7 +15,7 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    video_reader.stop()
+    await video_reader.stop()
 
 
 if __name__ == "__main__":

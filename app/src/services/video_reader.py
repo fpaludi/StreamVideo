@@ -1,11 +1,14 @@
 from typing import Optional
 import time
-from queue import Queue, Empty, Full
+from queue import Queue, Empty as QueueEmpty, Full as QueueFull
 from threading import Thread
 import numpy as np
 import cv2
 from logger import get_logger
 from core.fps import FPS
+
+# from asyncio import Queue, QueueEmpty, QueueFull
+
 
 class VideoReader:
     def __init__(self, source, max_size=1, clean_if_full=True) -> None:
@@ -16,14 +19,14 @@ class VideoReader:
         self._running = False
         self._thread: Optional[Thread] = None
 
-        self._logger = get_logger(__name__)
+        self._logger = get_logger(__class__.__name__)
 
     def _loop(self) -> None:
         while self._running:
             frame = self._read_from_source()
             try:
                 self._queue.put(frame, block=False)
-            except Full:
+            except QueueFull:
                 self._logger.debug("Video reader queue is full.")
                 if self._clean_if_full:
                     self._logger.debug("Cleaning video reader queue")
@@ -50,7 +53,7 @@ class VideoReader:
         )
         self._thread.start()
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         self._logger.info("Closing video reader")
         self._running = False
         self.clean_queue()
@@ -60,9 +63,12 @@ class VideoReader:
             self._thread.join()
 
     def clean_queue(self) -> None:
-        while not self._queue.empty():
-            self._queue.get()
-            self._queue.task_done()
+        while True:
+            try:
+                self._queue.get_nowait()
+                self._queue.task_done()
+            except QueueEmpty:
+                break
 
     def _reconnect(self) -> np.ndarray:
         attempt = 0
