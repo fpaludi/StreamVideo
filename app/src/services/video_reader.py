@@ -18,7 +18,6 @@ class VideoReader:
         self._clean_if_full = clean_if_full
         self._running = False
         # self._thread: Optional[Thread] = None
-        self._task = None
         self._logger = get_logger(__class__.__name__)
 
     async def _loop(self) -> None:
@@ -49,14 +48,7 @@ class VideoReader:
     async def start(self) -> None:
         self._logger.info("Starting video reader")
         self._running = True
-        #self._thread = Thread(
-        #    target=self._loop, args=(), daemon=True  ## FIXME: Add necessary to make daemon=False
-        #)
-
-        # self._task = self._aio_loop.create_task(self._loop())
         aio.gather(self._loop())
-
-        #aio.run_coroutine_threadsafe(self._loop(), self._aio_loop)
 
     async def stop(self) -> None:
         self._logger.info("Closing video reader")
@@ -64,10 +56,6 @@ class VideoReader:
         self.clean_queue()
         await self._queue.join()
         # self._capture.release()
-        try:
-            self._task.cancel()
-        except aio.CancelledError:
-            pass
 
     def clean_queue(self, half=False) -> None:
         size = int(self._queue_size / 2) if half else self._queue_size
