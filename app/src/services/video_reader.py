@@ -27,7 +27,7 @@ class VideoReader:
             try:
                 await aio.wait_for(self._queue.put(frame), 0.1)
             except (QueueFull, aio.TimeoutError):
-                self._logger.info("Video reader queue is full.")
+                self._logger.debug("Video reader queue is full.")
                 if self._clean_if_full:
                     self._logger.debug("Cleaning video reader queue")
                     self.clean_queue(half=True)
