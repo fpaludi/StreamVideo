@@ -16,10 +16,6 @@ from utils.websockets import check_gracefully_close_connection
 router = APIRouter()
 logger = get_logger(__name__)
 
-@router.get("/")
-async def route():
-    return "Hello!"
-
 
 @router.get("/ws")
 async def get():
@@ -28,7 +24,6 @@ async def get():
 
 @router.websocket("/ws/testchannel")
 async def websocket_endpoint(websocket: WebSocket):
-    logger.info("HOLA")
     await websocket.accept()
     try:
         logger.info(f"Client start connection {websocket.client.host}")
