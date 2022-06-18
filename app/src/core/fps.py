@@ -1,6 +1,8 @@
 from typing import Callable
 from logger import get_logger
 from time import perf_counter
+from functools import wraps
+import asyncio as aio
 
 
 class FPS:
@@ -15,14 +17,29 @@ class FPS:
         if not self._logger:
             name = ".".join(func.__qualname__.split(".")[:-1])
             self._logger = get_logger(name)
-        def inner(*args, **kwargs):
-            result = func(*args, **kwargs)
-            self._counter += 1
-            t1 = perf_counter()
-            time_div = t1 - self._last_log_time
-            if time_div > self._window:
-                self._logger.info(f"{self._legend}: {self._counter / time_div}")
-                self._last_log_time = perf_counter()
-                self._counter = 0
-            return result
-        return inner
+        if aio.iscoroutine(func):
+            @wraps(func)
+            async def async_inner(*args, **kwargs):
+                result = await func(*args, **kwargs)
+                self._counter += 1
+                t1 = perf_counter()
+                time_div = t1 - self._last_log_time
+                if time_div > self._window:
+                    self._logger.info(f"{self._legend}: {self._counter / time_div}")
+                    self._last_log_time = perf_counter()
+                    self._counter = 0
+                return result
+            return async_inner
+        else:
+            @wraps(func)
+            def inner(*args, **kwargs):
+                result = func(*args, **kwargs)
+                self._counter += 1
+                t1 = perf_counter()
+                time_div = t1 - self._last_log_time
+                if time_div > self._window:
+                    self._logger.info(f"{self._legend}: {self._counter / time_div}")
+                    self._last_log_time = perf_counter()
+                    self._counter = 0
+                return result
+            return inner

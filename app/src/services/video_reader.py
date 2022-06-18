@@ -1,13 +1,12 @@
 from typing import Optional
 import time
-from queue import Queue, Empty as QueueEmpty, Full as QueueFull
 from threading import Thread
 import numpy as np
 import cv2
 from logger import get_logger
 from core.fps import FPS
-
-# from asyncio import Queue, QueueEmpty, QueueFull
+import asyncio as aio
+from asyncio import Queue, QueueEmpty, QueueFull
 
 
 class VideoReader:
@@ -15,62 +14,71 @@ class VideoReader:
         self._source = source
         self._capture = cv2.VideoCapture(self._source)
         self._queue = Queue(maxsize=max_size)
+        self._queue_size = max_size
         self._clean_if_full = clean_if_full
         self._running = False
-        self._thread: Optional[Thread] = None
-
+        # self._thread: Optional[Thread] = None
+        self._task = None
         self._logger = get_logger(__class__.__name__)
 
-    def _loop(self) -> None:
+    async def _loop(self) -> None:
         while self._running:
-            frame = self._read_from_source()
+            # self._logger.info("Running")
+            frame = await self._read_from_source()
             try:
-                self._queue.put(frame, block=False)
-            except QueueFull:
-                self._logger.debug("Video reader queue is full.")
+                await aio.wait_for(self._queue.put(frame), 0.1)
+            except (QueueFull, aio.TimeoutError):
+                self._logger.info("Video reader queue is full.")
                 if self._clean_if_full:
                     self._logger.debug("Cleaning video reader queue")
-                    self.clean_queue()
+                    self.clean_queue(half=True)
 
     @FPS("RTSP Reader FPS", 5)
-    def _read_from_source(self) -> Optional[np.ndarray]:
+    async def _read_from_source(self) -> Optional[np.ndarray]:
         retval, frame = self._capture.read()
         if not retval:
-            frame = self._reconnect()
+            frame = await self._reconnect()
         return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) if retval else None
 
     @FPS("Consumer FPS", 5)
-    def get_frame(self) -> Optional[np.ndarray]:
-        frame = self._queue.get()
+    async def get_frame(self) -> Optional[np.ndarray]:
+        frame = await self._queue.get()
         self._queue.task_done()
         return frame
 
-    def start(self) -> None:
+    async def start(self) -> None:
         self._logger.info("Starting video reader")
         self._running = True
-        self._thread = Thread(
-            target=self._loop, args=(), daemon=True  ## FIXME: Add necessary to make daemon=False
-        )
-        self._thread.start()
+        #self._thread = Thread(
+        #    target=self._loop, args=(), daemon=True  ## FIXME: Add necessary to make daemon=False
+        #)
+
+        # self._task = self._aio_loop.create_task(self._loop())
+        aio.gather(self._loop())
+
+        #aio.run_coroutine_threadsafe(self._loop(), self._aio_loop)
 
     async def stop(self) -> None:
         self._logger.info("Closing video reader")
         self._running = False
         self.clean_queue()
-        self._queue.join()
+        await self._queue.join()
         # self._capture.release()
-        if self._thread:
-            self._thread.join()
+        try:
+            self._task.cancel()
+        except aio.CancelledError:
+            pass
 
-    def clean_queue(self) -> None:
-        while True:
+    def clean_queue(self, half=False) -> None:
+        size = int(self._queue_size / 2) if half else self._queue_size
+        for _ in range(size):
             try:
                 self._queue.get_nowait()
                 self._queue.task_done()
             except QueueEmpty:
                 break
 
-    def _reconnect(self) -> np.ndarray:
+    async def _reconnect(self) -> np.ndarray:
         attempt = 0
         self._capture = cv2.VideoCapture(self._source)
         while True:
@@ -79,5 +87,5 @@ class VideoReader:
                 break
             attempt += 1
             self._logger.warning(f"Trying to reconnect. Attempt: {attempt}")
-            time.sleep(1)
+            await aio.sleep(1)
         return frame
