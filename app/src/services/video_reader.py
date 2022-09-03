@@ -67,7 +67,7 @@ class VideoReader:
         self._running = False
         self.clean_queue()
         await self._queue.join()
-        # self._capture.release()
+        self._capture.release()
 
     def clean_queue(self, half=False) -> None:
         size = int(self._queue_size / 2) if half else self._queue_size
@@ -81,7 +81,7 @@ class VideoReader:
     def _reconnect(self) -> Tuple[bool, np.ndarray]:
         attempt = 0
         self._capture = cv2.VideoCapture(self._source)
-        while True:
+        while self._running:
             retval, frame = self._capture.read()
             if retval:
                 break

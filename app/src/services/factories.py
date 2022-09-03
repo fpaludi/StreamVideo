@@ -9,4 +9,4 @@ VideoReaderFactory = providers.Factory(
 )
 
 
-video_reader = VideoReaderFactory()
+video_reader: VideoReader = VideoReaderFactory()
