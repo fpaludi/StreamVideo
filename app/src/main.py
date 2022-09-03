@@ -1,8 +1,9 @@
+from __future__ import annotations
 import asyncio as aio
 import uvloop
 aio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
 import uvicorn
+import signal
 from app_factory import app_factory
 from services.factories import video_reader
 from logger import get_logger
@@ -28,4 +29,10 @@ if __name__ == "__main__":
     loop = aio.get_event_loop()
     config = uvicorn.Config(app=app, loop=loop, host="0.0.0.0", port=80, reload=False)
     server = uvicorn.Server(config)
+
+    signal.signal(signal.SIGTERM, server.handle_exit)
+    signal.signal(signal.SIGINT, server.handle_exit)
+
     loop.run_until_complete(server.serve())
+    logger.warning("Closing API")
+    loop.run_until_complete(video_reader.stop())
