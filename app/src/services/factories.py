@@ -8,4 +8,5 @@ VideoReaderFactory = providers.Factory(
     VideoReader, source=settings.RTSP_SOURCE, max_size=settings.VIDEO_READER_QUEUE_SIZE
 )
 
-video_reader: VideoReader = VideoReaderFactory()
+
+video_reader = VideoReaderFactory()
