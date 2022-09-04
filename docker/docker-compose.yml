@@ -7,6 +7,10 @@ services:
       dockerfile: docker/Dockerfile
     command: /start.sh
 
+  redis:
+    image: "redis:7.0.4"
+    # TODO: Add disk storage?
+
 networks:
   default:
     external:
